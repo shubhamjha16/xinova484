@@ -1,4 +1,5 @@
 import type {NextConfig} from 'next';
+import webpack from 'webpack';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -17,6 +18,14 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config, { isServer, nextRuntime, webpack }) => {
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@opentelemetry\/exporter-jaeger$/,
+      })
+    );
+    return config;
   },
 };
 
