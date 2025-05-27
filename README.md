@@ -15,7 +15,11 @@ Xinova is a web application that uses AI to generate educational content on Comp
 *   **Responsive Design:** The user interface is designed to adapt to various screen sizes for accessibility on desktop and mobile devices.
 *   **User-Friendly Interface:** Built with Shadcn/ui components, providing a clean and intuitive experience, including toast notifications for feedback and status updates.
 *   **Markdown Support:** Renders questions, explanations, and background information in Markdown, allowing for formatted text and code snippets.
-*   **Syllabus-Based Question Generation:** A dedicated feature to generate a set of 50 questions tailored to a provided syllabus and examples of past exam questions, with marks distributed across 1, 2.5, 5, and 12.5 points.
+    *   **Syllabus-Based Question Generation:** 
+        *   **Purpose:** Generates 50 unique exam-style questions based on a provided syllabus and (optionally) past exam questions. This feature is designed to assist educators and students in creating practice materials tailored to specific curricula.
+        *   **Access:** Navigate to the `/syllabus-quiz` page in the application.
+        *   **Input:** You'll need to provide the full syllabus text. Optionally, but recommended, include text from past exam questions to guide the style, topic emphasis, and difficulty for different mark values.
+        *   **Output:** The tool produces 50 questions. Each question is assigned marks from one of the following values: 1, 2.5, 5, or 12.5 points. The questions are distributed across various complexities appropriate to their mark value, covering topics derived from the syllabus and insights from any provided past questions.
 
 ## Tech Stack
 *   **Next.js:** React framework for server-side rendering and static site generation.
@@ -83,23 +87,6 @@ Xinova is a web application that uses AI to generate educational content on Comp
 *   `npm run start`: Starts the Next.js production server.
 *   `npm run lint`: Runs ESLint to check for code style issues.
 *   `npm run typecheck`: Runs TypeScript type checking.
-
-## Syllabus-Based Question Generator
-
-The application includes a powerful feature to generate a comprehensive set of 50 exam-style questions based on your specific curriculum. This tool is designed to assist educators and students in creating practice materials.
-
-**Access:**
-*   This feature is available on a separate tab/page, typically found at `/syllabus-quiz` in the application.
-
-**How to Use:**
-
-1.  **Navigate to the Feature:** Open the "Syllabus-Based Question Generator" tab.
-2.  **Input Syllabus Text:** Paste the complete text of your course syllabus into the designated "Syllabus Text" area.
-3.  **Input Past Exam Questions (Recommended):** In the "Past Exam Questions" area, paste a list of questions that have been asked in previous exams for this syllabus. This helps the AI understand the desired style, common topics, and typical difficulty associated with different mark values. While optional, providing this input significantly improves the relevance and quality of the generated questions.
-4.  **Generate Questions:** Click the "Generate 50 Questions" button.
-5.  **Review Output:** The system will generate 50 questions. Each question will be displayed with its assigned marks (1, 2.5, 5, or 12.5). The AI aims to provide a balanced distribution of these marks and ensure questions vary in complexity appropriate to their value.
-
-The AI uses the syllabus to understand the scope of topics, the past questions to understand the examination pattern, and internal flowcharting logic to ensure core concepts are covered. Due to the nature of AI, you may receive slightly different questions each time you generate them, even with the same input, but they will adhere to the overall patterns and content provided.
 
 ## Project Structure
 Here's a brief overview of some key directories:

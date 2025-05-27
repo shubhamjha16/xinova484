@@ -1,173 +1,159 @@
 'use client';
-
-import * as React from 'react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { runFlow } from '@genkit-ai/next/client';
-// Adjust the path to where your flow is exported from.
-// This assumes your flows are structured in an 'ai/flows' directory relative to 'src'.
 import { generateSyllabusBasedQuestions } from '@/ai/flows/generate-syllabus-questions';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
-// Define the structure for a single question
-interface Question {
+// Define type for questions
+type Question = {
   questionText: string;
   marks: number;
-}
-
-// Define the expected output structure of your flow
-// This should match the OutputSchema of your generateSyllabusBasedQuestions flow
-type SyllabusQuestionsOutput = Array<{
-  questionText: string;
-  marks: number;
-}>;
-
+};
 
 export default function SyllabusQuizPage() {
   const [syllabusText, setSyllabusText] = useState('');
   const [pastExamQuestionsText, setPastExamQuestionsText] = useState('');
   const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [error, setError] = useState('');
 
-  const handleGenerateQuestions = async () => {
-    if (!syllabusText.trim()) {
-      setError('Syllabus text cannot be empty.');
-      toast({ title: 'Error', description: 'Syllabus text cannot be empty.', variant: 'destructive' });
-      return;
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setError('');
     setGeneratedQuestions([]); // Clear previous questions
 
-    try {
-      // The first argument to runFlow is the flow reference imported above.
-      // The second argument is the input object for the flow.
-      const result = await runFlow<SyllabusQuestionsOutput, { syllabusText: string; pastExamQuestionsText: string }>(
-        generateSyllabusBasedQuestions,
-        { syllabusText, pastExamQuestionsText }
-      );
+    // Basic validation
+    if (!syllabusText.trim()) {
+      setError('Syllabus text cannot be empty.');
+      setIsLoading(false);
+      return;
+    }
+    // Past exam questions are optional based on the prompt structure, so no validation for emptiness here.
 
-      if (result && result.length > 0) {
+    try {
+      const result = await generateSyllabusBasedQuestions({ syllabusText, pastExamQuestionsText });
+      
+      // Ensure result is an array, as expected by SyllabusQuestionsOutputSchema
+      if (Array.isArray(result) && result.length > 0) {
         setGeneratedQuestions(result);
-        toast({ title: 'Success!', description: `Generated ${result.length} questions.`, variant: 'success' });
-      } else {
-        // This case handles if the flow runs successfully but returns an empty array or undefined/null
-        setError('The AI returned an empty or invalid set of questions. Please try again or refine your input.');
-        toast({ title: 'No Questions Generated', description: 'The AI returned no questions. Your input might be too restrictive or unclear.', variant: 'warning' });
-        setGeneratedQuestions([]); // Ensure it's empty
+      } else if (Array.isArray(result) && result.length === 0) {
+        setError('No questions were generated. The input might have been too restrictive, or the AI could not find relevant topics to generate questions for.');
+      } 
+      else {
+        // This case handles if 'result' is not an array or is undefined/null,
+        // which would indicate an issue with the flow's output or an unexpected response.
+        console.warn('Unexpected result format from generateSyllabusBasedQuestions:', result);
+        setError('Received an unexpected format from the question generation service. Expected an array of questions.');
       }
-    } catch (e: any) {
-      console.error('Error generating questions:', e);
-      let errorMessage = 'An unexpected error occurred.';
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      } else if (typeof e === 'string') {
-        errorMessage = e;
+    } catch (err: any) {
+      console.error('Error generating questions:', err);
+      let errorMessage = 'Failed to generate questions. An unexpected error occurred.';
+      if (err instanceof Error) {
+        errorMessage = `Failed to generate questions: ${err.message}`;
+      } else if (typeof err === 'string') {
+        errorMessage = `Failed to generate questions: ${err}`;
       }
-      // Check for specific Genkit error structures if available, e.g., e.details
-      if (e.details) {
-        errorMessage = `${errorMessage} Details: ${e.details}`;
+      // If the error object has more specific details (e.g. from Genkit or AI service)
+      if (err.details) {
+        errorMessage += ` Details: ${err.details}`;
       }
-      setError(`Failed to generate questions: ${errorMessage}`);
-      toast({ title: 'Generation Failed', description: errorMessage, variant: 'destructive' });
-      setGeneratedQuestions([]); // Clear any partial results
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 bg-background">
-      <Card className="w-full max-w-4xl shadow-lg rounded-lg">
-        <CardHeader className="text-center bg-primary text-primary-foreground p-6">
-          <CardTitle className="text-3xl font-bold">Syllabus-Based Question Generator</CardTitle>
-          <CardDescription className="text-primary-foreground/80">
-            Paste your syllabus and (optionally) past exam questions to generate a custom set of 50 questions with marks.
+    <main className="container mx-auto p-4 xl:px-20 md:px-10 sm:px-2">
+      <Card className="mb-8 shadow-lg rounded-lg">
+        <CardHeader className="bg-gray-50 dark:bg-gray-800">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-center">Syllabus-Based Question Generator</CardTitle>
+          <CardDescription className="text-center text-gray-600 dark:text-gray-300 mt-1">
+            Input the syllabus text and (optionally) past exam questions to generate a custom set of quiz questions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 md:p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardContent className="p-6 md:p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="syllabusText" className="text-lg font-medium">Syllabus Text (Required)</Label>
+              <Label htmlFor="syllabusText" className="font-semibold text-lg">Syllabus Text (Required)</Label>
               <Textarea
                 id="syllabusText"
                 value={syllabusText}
                 onChange={(e) => setSyllabusText(e.target.value)}
+                rows={12}
                 placeholder="Paste the full syllabus text here..."
-                rows={15}
-                className="text-base"
+                disabled={isLoading}
+                className="text-base p-3 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pastExamQuestionsText" className="text-lg font-medium">Past Exam Questions (Optional)</Label>
+              <Label htmlFor="pastExamQuestionsText" className="font-semibold text-lg">Past Exam Questions (Optional)</Label>
               <Textarea
                 id="pastExamQuestionsText"
                 value={pastExamQuestionsText}
                 onChange={(e) => setPastExamQuestionsText(e.target.value)}
-                placeholder="Paste relevant past exam questions here to guide the AI..."
-                rows={15}
-                className="text-base"
+                rows={12}
+                placeholder="Paste relevant past exam questions here. This helps the AI understand the desired style, topic emphasis, and difficulty."
+                disabled={isLoading}
+                className="text-base p-3 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-          </div>
-
-          <Button
-            onClick={handleGenerateQuestions}
-            disabled={isLoading || !syllabusText.trim()}
-            className="w-full text-lg py-3 transition-transform duration-150 ease-in-out hover:scale-[1.02]"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Generating Questions...
-              </>
-            ) : (
-              'Generate 50 Questions'
-            )}
-          </Button>
-
-          {error && (
-            <div className="p-4 my-4 rounded-md bg-destructive/10 text-destructive border border-destructive">
-              <p className="font-semibold">Error Generating Questions:</p>
-              <p className="whitespace-pre-line">{error}</p>
-            </div>
-          )}
-
-          {generatedQuestions.length > 0 && !isLoading && (
-            <div className="space-y-6 pt-6 border-t mt-6">
-              <h3 className="text-2xl font-semibold text-center text-primary">Generated Questions</h3>
-              {generatedQuestions.map((q, index) => (
-                <Card key={index} className="shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Question {index + 1}</CardTitle>
-                    <CardDescription>Marks: {q.marks}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-base whitespace-pre-line">{q.questionText}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {!isLoading && !error && generatedQuestions.length === 0 && (
-            <div className="text-center text-muted-foreground pt-6 border-t mt-6">
-              { syllabusText.trim() ? (
-                <p>Click "Generate 50 Questions" to see the results.</p>
-              ) : (
-                <p>Enter your syllabus (and optionally past questions) and click "Generate 50 Questions" to begin.</p>
-              )}
-            </div>
-          )}
+            <Button
+              type="submit"
+              disabled={isLoading || !syllabusText.trim()}
+              className="w-full sm:w-auto py-3 px-6 text-lg font-medium rounded-md transition-colors duration-150 ease-in-out"
+            >
+              {isLoading ? 'Generating Questions...' : 'Generate Questions'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
+
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center my-6 p-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mb-3"></div>
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Loading questions, please wait...</p>
+        </div>
+      )}
+      
+      {error && (
+          <Card className="mt-6 bg-red-50 border-red-300 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-red-700 text-xl font-semibold">Error Generating Questions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-red-600 text-base whitespace-pre-wrap">{error}</p>
+            </CardContent>
+          </Card>
+      )}
+
+      {!isLoading && !error && generatedQuestions.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-2xl font-semibold mb-5 text-center">Generated Questions ({generatedQuestions.length})</h2>
+          <div className="space-y-4">
+            {generatedQuestions.map((q, index) => (
+              <Card key={index} className="shadow-md hover:shadow-lg transition-shadow duration-200">
+                <CardHeader className="bg-gray-50 dark:bg-gray-700">
+                  <CardTitle className="text-xl">Question {index + 1}</CardTitle>
+                  <CardDescription className="text-base">Marks: {q.marks}</CardDescription>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <p className="text-gray-800 dark:text-gray-200 text-base" style={{ whiteSpace: 'pre-wrap' }}>{q.questionText}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!isLoading && !error && generatedQuestions.length === 0 && syllabusText.trim() && (
+        <div className="mt-6 p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>Click "Generate Questions" to start. If no questions appear after generation, check if an error message was displayed or if your input was too restrictive.</p>
+        </div>
+      )}
     </main>
   );
 }
